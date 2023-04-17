@@ -1,0 +1,180 @@
+#include <iostream>
+#include <vector>
+#include <stack>
+#include <future>
+#include <mutex>
+#include <algorithm>
+
+
+void dfs(std::vector<std::vector<int>>& graph, int first, std::mutex& mtx)
+{
+    std::vector<bool> visited(graph.size(), false); //wektor odwiedzonych wierzchołków
+    std::stack<int> dfs_stack; //stos z wierzchołkami do odwiedzenia
+    dfs_stack.push(first); //pierwszy wierzchołek na stos
+
+
+    while (!dfs_stack.empty())
+    {
+        int curr = dfs_stack.top(); //pobranie wierzcholka z góry stosu
+        dfs_stack.pop(); //zdjęcie elementu z góry stosu
+
+        if (!visited[curr]) //jeśli wierzchołek nieodwiedzony
+        {
+            visited[curr] = true; //zmiana flagi na odwiedzony
+            std::lock_guard<std::mutex> lock(mtx); // blokada muteksa (tylko jeden wątek może wypisywać wyjście na raz)
+            std::cout << curr << " "; //wypisanie wierzchołka
+            sort(graph[curr].begin(), graph[curr].end()); //sortowanie rosnąco elementów wektora
+
+            // Przejście po wszystkich sąsiadach wierzchołka curr (od końca wektora)
+            for (int i = graph[curr].size() - 1; i >= 0; --i)
+            {
+                int neighbour = graph[curr][i]; //Pobranie sąsiada
+                //Jeżeli sąsiad nie został jeszcze odwiedzony to dodaj go do stosu
+                if (!visited[neighbour])
+                {
+                    dfs_stack.push(neighbour);
+                }
+            }
+        }
+    }
+    std::cout << std::endl;
+}
+
+void control_graphs() {
+    
+    std::vector<std::vector<int>> graph1= {
+      {1, 2, 3},
+      {0, 3},
+      {0, 3},
+      {0, 1, 2, 4},
+      {3},
+    };
+    
+    std::vector<std::vector<int>> graph2 = {
+      {1, 2},
+      {0, 2, 3},
+      {0, 1, 4},
+      {1, 4, 5},
+      {2, 3, 5},
+      {3, 4}
+    };
+
+
+    std::mutex mtx;
+
+    // Uruchamianie osobnych wątków dla każdego grafu
+    std::packaged_task<void(std::vector<std::vector<int>>&, int, std::mutex&)> task1(dfs);
+    std::future<void> future1 = task1.get_future();
+    std::thread thread1(std::move(task1), std::ref(graph1), 0, std::ref(mtx));
+
+    std::packaged_task<void(std::vector<std::vector<int>>&, int, std::mutex&)> task2(dfs);
+    std::future<void> future2 = task2.get_future();
+    std::thread thread2(std::move(task2), std::ref(graph2), 0, std::ref(mtx));
+
+    // Oczekiwanie na zakończenie działania wątków
+    future1.get();
+    thread1.join();
+    future2.get();
+    thread2.join();
+    std::cout << std::endl;
+    std::cout << "Wcisnij cokolwiek zeby przejsc do menu" << std::endl;
+}
+
+void users_graphs() {
+    int graph_count;
+    std::cout << "Podaj liczbe grafow: ";
+    std::cin >> graph_count;
+
+    // Inicjalizacja vectora przechowującego grafy
+    std::vector<std::vector<std::vector<int>>> graphs(graph_count);
+
+    // Wczytywanie grafów
+    for (int i = 0; i < graph_count; ++i)
+    {
+        std::cout << "Podaj liczbe wierzcholkow w grafie " << i + 1 << ": ";
+        int node_count;
+        std::cin >> node_count;
+
+        std::vector<std::vector<int>> graph(node_count);
+
+        std::cout << "Podaj krawedzie grafu " << i + 1 << ": " << std::endl;
+        for (int j = 0; j < node_count; ++j)
+        {
+            int neighbours_count;
+            std::cout << "Podaj liczbe sasiadow wierzcholka " << j << ": ";
+            std::cin >> neighbours_count;
+
+            std::vector<int> neighbours(neighbours_count);
+            std::cout << "Podaj sasiadow wierzcholka " << j << ": ";
+            for (int k = 0; k < neighbours_count; ++k)
+            {
+                std::cin >> neighbours[k];
+            }
+
+            graph[j] = neighbours;
+        }
+
+        graphs[i] = graph;
+    }
+
+    std::mutex mtx; //utowrzenie mutexa - synchronizacja wątków
+
+    // Uruchamianie osobnych wątków dla każdego grafu
+    std::vector<std::future<void>> futures;
+    std::vector<std::thread> threads;
+
+    for (std::vector<std::vector<int>>::size_type i = 0; i < graphs.size(); ++i)
+    {
+        std::packaged_task<void(std::vector<std::vector<int>>&, int, std::mutex&)> task(dfs);
+        std::future<void> future = task.get_future();
+        std::thread thread(std::move(task), std::ref(graphs[i]), 0, std::ref(mtx));
+        futures.push_back(std::move(future));
+        threads.push_back(std::move(thread));
+    }
+
+    for (std::vector<std::thread>::size_type i = 0; i < threads.size(); ++i)
+    {
+        futures[i].get();
+        threads[i].join();
+    }
+    std::cout << std::endl;
+    std::cout << "Wcisnij cokolwiek zeby przejsc do menu" << std::endl;
+}
+
+void menu() {
+    std::cout << "#######################################" << std::endl;
+    std::cout << "##                                   ##" << std::endl;
+    std::cout << "##  Program przeszukujacy graf DFS   ##" << std::endl;
+    std::cout << "##  Wybierz opcje:                   ##" << std::endl;
+    std::cout << "##  1. Podaj swoje grafy             ##" << std::endl;
+    std::cout << "##  2. Testuj na grafach wbudowanych ##" << std::endl;
+    std::cout << "##  3. Wyjdz z programu              ##" << std::endl;
+    std::cout << "##                                   ##" << std::endl;
+    std::cout << "#######################################" << std::endl;
+}
+
+int main()
+{
+    char input;
+    while (true) {
+        menu();
+        std::cin >> input;
+        system("cls");
+        switch (input) {
+        case '1':
+            users_graphs();
+            std::cin >> input;
+            system("cls");
+            break;
+        case '2':
+            control_graphs();
+            std::cin >> input;
+            system("cls");
+            break;
+        case '3':
+            return 0;
+        }
+    }
+    return 0;
+}
+
