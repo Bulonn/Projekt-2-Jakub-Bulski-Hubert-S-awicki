@@ -5,6 +5,7 @@
 #include <mutex>
 #include <algorithm>
 
+//Zadanie 3 - Przeszukiwanie grafu metodą DFS
 
 void dfs(std::vector<std::vector<int>>& graph, int first, std::mutex& mtx)
 {
