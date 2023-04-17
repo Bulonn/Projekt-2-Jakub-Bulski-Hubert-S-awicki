@@ -40,6 +40,8 @@ void dfs(std::vector<std::vector<int>>& graph, int first, std::mutex& mtx)
     std::cout << std::endl;
 }
 
+//Funkcja z gotowymi grafami w celu sprawdzenia poprawnosci dzialania kodu
+
 void control_graphs() {
     
     std::vector<std::vector<int>> graph1= {
@@ -59,7 +61,7 @@ void control_graphs() {
       {3, 4}
     };
 
-
+    //deklaracja mutexa mtx
     std::mutex mtx;
 
     // Uruchamianie osobnych wątków dla każdego grafu
