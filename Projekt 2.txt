@@ -23,9 +23,9 @@ void dfs(std::vector<std::vector<int>>& graph, int first, std::mutex& mtx)
             visited[curr] = true; //zmiana flagi na odwiedzony
             std::lock_guard<std::mutex> lock(mtx); // blokada muteksa (tylko jeden wątek może wypisywać wyjście na raz)
             std::cout << curr << " "; //wypisanie wierzchołka
-            sort(graph[curr].begin(), graph[curr].end()); //sortowanie rosnąco elementów wektora
+            sort(graph[curr].begin(), graph[curr].end()); //sortowanie rosnąco elementów wektora aby uniknąć problemów z kolejnością wprowadzania numerów z klawiatury 
 
-            // Przejście po wszystkich sąsiadach wierzchołka curr (od końca wektora)
+            //Przejście po wszystkich sąsiadach wierzchołka aktualnie sprawdzanego (curr - od końca wektora)
             for (int i = graph[curr].size() - 1; i >= 0; --i)
             {
                 int neighbour = graph[curr][i]; //Pobranie sąsiada
@@ -125,6 +125,8 @@ void users_graphs() {
     std::vector<std::future<void>> futures;
     std::vector<std::thread> threads;
 
+    //Uzycie std packaged task (task, future, przypisywanie do wektora dla wątków i future, a następnie oczekiwanie na pobranie wyniku)
+    
     for (std::vector<std::vector<int>>::size_type i = 0; i < graphs.size(); ++i)
     {
         std::packaged_task<void(std::vector<std::vector<int>>&, int, std::mutex&)> task(dfs);
